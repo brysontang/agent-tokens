@@ -1,0 +1,26 @@
+{
+  "id": "v0-intent-strict-weather",
+  "desc": "Strict per-request intent allowing only GETs to api.weather.gov.",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiIwMUowWjdHN0U1TTdIOFE3SjlLMlQ4UUo5QiIsImdvYWwiOiJHZXQgdGhlIHdlYXRoZXIgZm9yZWNhc3QgZm9yIE1hdWkiLCJwcm9tcHRIYXNoIjoic2hhMjU2OjAxMjM0NTY3ODlhYmNkZWYiLCJhbGxvdyI6W3sib3JpZ2luIjoiaHR0cHM6Ly9hcGkud2VhdGhlci5nb3YiLCJtZXRob2RzIjpbIkdFVCJdLCJwYXRoUHJlZml4IjoiLyJ9XSwiZXhwIjoiMjA5OS0xMi0xMlQyMDoxMDowMFoifX19",
+  "expect": {
+    "v": 0,
+    "pkgs": {
+      "at.intent.v1": {
+        "mode": "strict",
+        "intentId": "01J0Z7G7E5M7H8Q7J9K2T8QJ9B",
+        "goal": "Get the weather forecast for Maui",
+        "promptHash": "sha256:0123456789abcdef",
+        "allow": [
+          {
+            "origin": "https://api.weather.gov",
+            "methods": [
+              "GET"
+            ],
+            "pathPrefix": "/"
+          }
+        ],
+        "exp": "2099-12-12T20:10:00Z"
+      }
+    }
+  }
+}

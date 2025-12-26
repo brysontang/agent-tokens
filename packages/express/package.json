@@ -1,0 +1,40 @@
+{
+  "name": "@agent-tokens/express",
+  "version": "0.1.0",
+  "description": "Express middleware for Agent Tokens validation and intent enforcement.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brysontang/agent-tokens.git"
+  },
+  "homepage": "https://agenttokens.org",
+  "bugs": "https://github.com/brysontang/agent-tokens/issues",
+  "keywords": ["express", "middleware", "agent", "ai", "security"],
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@agent-tokens/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0 || ^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "test": "pnpm --filter @agent-tokens/core build && vitest run",
+    "lint": "node -e \"process.exit(0)\"",
+    "fmt": "node -e \"process.exit(0)\""
+  }
+}

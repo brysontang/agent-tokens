@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-wrong-version",
+  "desc": "Unsupported envelope version.",
+  "token": "eyJ2IjoxLCJwa2dzIjp7fX0",
+  "error": "unsupported_version"
+}

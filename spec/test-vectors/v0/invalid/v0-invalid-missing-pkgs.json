@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-missing-pkgs",
+  "desc": "Envelope missing pkgs object.",
+  "token": "eyJ2IjowfQ",
+  "error": "invalid_token"
+}

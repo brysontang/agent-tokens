@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-whitespace",
+  "desc": "Token contains whitespace.",
+  "token": "eyJ2IjowLCJwa2dzIjp7fX0 \n",
+  "error": "invalid_token"
+}

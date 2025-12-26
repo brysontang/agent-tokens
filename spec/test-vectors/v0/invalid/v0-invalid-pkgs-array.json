@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-pkgs-array",
+  "desc": "pkgs must be an object, not an array.",
+  "token": "eyJ2IjowLCJwa2dzIjpbXX0",
+  "error": "invalid_token"
+}

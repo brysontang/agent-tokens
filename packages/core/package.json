@@ -1,0 +1,31 @@
+{
+  "name": "@agent-tokens/core",
+  "version": "0.1.0",
+  "description": "The reference implementation for the Agent Tokens standard (v0).",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brysontang/agent-tokens.git"
+  },
+  "homepage": "https://agenttokens.org",
+  "bugs": "https://github.com/brysontang/agent-tokens/issues",
+  "keywords": ["agent", "ai", "protocol", "security", "http", "intent"],
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "test": "vitest run",
+    "lint": "node -e \"process.exit(0)\"",
+    "fmt": "node -e \"process.exit(0)\""
+  }
+}

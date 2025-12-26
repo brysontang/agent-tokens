@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "suite": "agent-tokens/v0/policy",
+  "package": "at.intent.v1",
+  "vectors": [
+    {
+      "id": "v0-policy-fail-drift",
+      "file": "v0-policy-fail-drift.json",
+      "purpose": "Token is valid, but request (POST /bank/transfer) conflicts with allow list (GET /weather).",
+      "expect_result": "deny"
+    },
+    {
+      "id": "v0-policy-fail-expired",
+      "file": "v0-policy-fail-expired.json",
+      "purpose": "Token parses correctly but must be rejected because it is expired.",
+      "expect_result": "deny"
+    },
+    {
+      "id": "v0-policy-fail-strict-empty",
+      "file": "v0-policy-fail-strict-empty.json",
+      "purpose": "Strict mode with no allow rules must deny all requests (fail closed).",
+      "expect_result": "deny"
+    },
+    {
+      "id": "v0-policy-fail-wrong-origin",
+      "file": "v0-policy-fail-wrong-origin.json",
+      "purpose": "Token is valid for Weather Gov, but the request is received by Bank Corp (origin mismatch).",
+      "expect_result": "deny"
+    },
+    {
+      "id": "v0-policy-pass-case-normalization",
+      "file": "v0-policy-pass-case-normalization.json",
+      "purpose": "Token specifies 'GET', request comes in as 'get'. Evaluator should normalize methods.",
+      "expect_result": "allow"
+    },
+    {
+      "id": "v0-policy-pass-origin-canon",
+      "file": "v0-policy-pass-origin-canon.json",
+      "purpose": "Token has messy casing/slashes in origin rule; Context has clean origin. Evaluator must canonicalize both.",
+      "expect_result": "allow"
+    },
+    {
+      "id": "v0-policy-pass-weather",
+      "file": "v0-policy-pass-weather.json",
+      "purpose": "Token is valid and request matches strict allowlist (GET /weather).",
+      "expect_result": "allow"
+    }
+  ]
+}

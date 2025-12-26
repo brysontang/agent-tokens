@@ -1,0 +1,10 @@
+{
+  "id": "v0-policy-pass-weather",
+  "desc": "Token is valid and request matches strict allowlist (GET /weather).",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJkcmlmdC10ZXN0IiwiYWxsb3ciOlt7Im1ldGhvZHMiOlsiR0VUIl0sInBhdGhQcmVmaXgiOiIvd2VhdGhlciJ9XSwiZXhwIjoiMjA5OS0wMS0wMVQwMDowMDowMFoifX19",
+  "context": {
+    "method": "GET",
+    "path": "/weather/forecast"
+  },
+  "expect_result": "allow"
+}

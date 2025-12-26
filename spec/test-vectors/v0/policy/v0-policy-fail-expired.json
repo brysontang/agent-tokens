@@ -1,0 +1,11 @@
+{
+  "id": "v0-policy-fail-expired",
+  "desc": "Token parses correctly but must be rejected because it is expired.",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJleHAtdGVzdCIsImV4cCI6IjE5OTktMDEtMDFUMDA6MDA6MDBaIn19fQ",
+  "context": {
+    "method": "GET",
+    "path": "/"
+  },
+  "expect_result": "deny",
+  "expect_error": "token_expired"
+}

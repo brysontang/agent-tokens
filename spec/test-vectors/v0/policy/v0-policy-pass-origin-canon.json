@@ -1,0 +1,11 @@
+{
+  "id": "v0-policy-pass-origin-canon",
+  "desc": "Token has messy casing/slashes in origin rule; Context has clean origin. Evaluator must canonicalize both.",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJjYW5vbi10ZXN0IiwiYWxsb3ciOlt7Im9yaWdpbiI6Imh0dHBzOi8vQVBJLldFQVRIRVIuR09WLyIsIm1ldGhvZHMiOlsiR0VUIl0sInBhdGhQcmVmaXgiOiIvIn1dfX19",
+  "context": {
+    "method": "GET",
+    "path": "/forecast",
+    "origin": "https://api.weather.gov"
+  },
+  "expect_result": "allow"
+}

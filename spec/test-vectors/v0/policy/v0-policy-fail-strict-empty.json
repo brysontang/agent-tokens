@@ -1,0 +1,12 @@
+{
+  "id": "v0-policy-fail-strict-empty",
+  "desc": "Strict mode with no allow rules must deny all requests (fail closed).",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJmYWlsLWNsb3NlZCJ9fX0",
+  "context": {
+    "method": "GET",
+    "path": "/",
+    "origin": "https://anywhere.com"
+  },
+  "expect_result": "deny",
+  "expect_error": "out_of_scope"
+}

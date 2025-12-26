@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Tokens | The Protocol for Agent Identity & Intent</title>
+    <meta
+      name="description"
+      content="A minimal, modular HTTP standard for agent identity, intent, and policy enforcement."
+    />
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Merriweather:ital,wght@0,300;0,400;1,300&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #111111;
+        color: #e5e5e5;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .font-serif {
+        font-family: 'Merriweather', serif;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #111;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333;
+        border: 1px solid #111;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #444;
+      }
+
+      /* Syntax Highlighting */
+      .token-key {
+        color: #a5b3ce;
+      }
+      .token-string {
+        color: #a5d6ff;
+      }
+      .token-number {
+        color: #ff9e64;
+      }
+      .token-bool {
+        color: #ff9e64;
+      }
+      .token-null {
+        color: #f87171;
+      }
+    </style>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bg: '#111111',
+              surface: '#161616',
+              line: '#333333',
+              txt: '#E5E5E5',
+              muted: '#888888',
+              accent: '#3B82F6', // Electric Blue
+              success: '#10B981', // Terminal Green
+              warning: '#F59E0B', // Safety Orange
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // --- CORE UTILS (Matches @agent-tokens/core behavior) ---
+
+      const STRICT_B64URL_REGEX = /^[A-Za-z0-9_-]+$/;
+
+      function base64UrlEncodeJson(obj) {
+        try {
+          const json = JSON.stringify(obj);
+          // TextEncoder handles emojis/unicode correctly
+          const bytes = new TextEncoder().encode(json);
+
+          let bin = '';
+          const chunk = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunk) {
+            bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+          }
+
+          return btoa(bin)
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+        } catch (e) {
+          console.error('Encoding failed', e);
+          return '';
+        }
+      }
+
+      function base64UrlDecodeJson(token) {
+        if (!token) return null;
+
+        // Strictness Check
+        if (!STRICT_B64URL_REGEX.test(token)) {
+          throw new Error(
+            "Invalid format: Must be strict Base64URL (no padding, no '+', no '/')"
+          );
+        }
+
+        try {
+          let b64 = token.replace(/-/g, '+').replace(/_/g, '/');
+          while (b64.length % 4) b64 += '=';
+
+          const bin = atob(b64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+          const jsonStr = new TextDecoder().decode(bytes);
+          return JSON.parse(jsonStr);
+        } catch (e) {
+          throw new Error('Invalid JSON payload');
+        }
+      }
+
+      function isAtIntentV1(x) {
+        if (!x || typeof x !== 'object') return false;
+        const o = x;
+
+        if (o.mode !== 'strict' && o.mode !== 'advisory') return false;
+        if (typeof o.intentId !== 'string' || o.intentId.length === 0) return false;
+
+        if (o.goal !== undefined && typeof o.goal !== 'string') return false;
+        if (o.promptHash !== undefined && typeof o.promptHash !== 'string')
+          return false;
+
+        if (o.allow !== undefined) {
+          if (!Array.isArray(o.allow)) return false;
+          for (const rule of o.allow) {
+            if (!rule || typeof rule !== 'object') return false;
+            if (rule.origin !== undefined && typeof rule.origin !== 'string')
+              return false;
+            if (rule.methods !== undefined) {
+              if (
+                !Array.isArray(rule.methods) ||
+                !rule.methods.every((m) => typeof m === 'string')
+              )
+                return false;
+            }
+            if (
+              rule.pathPrefix !== undefined &&
+              typeof rule.pathPrefix !== 'string'
+            )
+              return false;
+          }
+        }
+
+        if (o.exp !== undefined) {
+          if (typeof o.exp !== 'string') return false;
+          if (Number.isNaN(Date.parse(o.exp))) return false;
+        }
+
+        return true;
+      }
+
+      // --- HELPER COMPONENTS ---
+
+      // SECURITY FIX: Escape HTML to prevent XSS
+      const escapeHtml = (s) =>
+        s
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+
+      const SyntaxHighlight = ({ code }) => {
+        const jsonString = JSON.stringify(code, null, 2);
+
+        const html = jsonString.replace(
+          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+          function (match) {
+            let cls = 'token-number';
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                cls = 'token-key';
+              } else {
+                cls = 'token-string';
+              }
+            } else if (/true|false/.test(match)) {
+              cls = 'token-bool';
+            } else if (/null/.test(match)) {
+              cls = 'token-null';
+            }
+            return '<span class="' + cls + '">' + escapeHtml(match) + '</span>';
+          }
+        );
+
+        return (
+          <pre
+            className="font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-all"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      };
+
+      // --- ICONS ---
+      const IconWrapper = ({ children, className }) => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className || 'w-6 h-6'}
+        >
+          {children}
+        </svg>
+      );
+      const Icons = {
+        Terminal: (props) => (
+          <IconWrapper {...props}>
+            <polyline points="4 17 10 11 4 5" />
+            <line x1="12" y1="19" x2="20" y2="19" />
+          </IconWrapper>
+        ),
+        Cpu: (props) => (
+          <IconWrapper {...props}>
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+            <rect x="9" y="9" width="6" height="6" />
+            <line x1="9" y1="1" x2="9" y2="4" />
+            <line x1="15" y1="1" x2="15" y2="4" />
+            <line x1="9" y1="20" x2="9" y2="23" />
+            <line x1="15" y1="20" x2="15" y2="23" />
+            <line x1="20" y1="9" x2="23" y2="9" />
+            <line x1="20" y1="14" x2="23" y2="14" />
+            <line x1="1" y1="9" x2="4" y2="9" />
+            <line x1="1" y1="14" x2="4" y2="14" />
+          </IconWrapper>
+        ),
+        ShieldAlert: (props) => (
+          <IconWrapper {...props}>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </IconWrapper>
+        ),
+        Globe: (props) => (
+          <IconWrapper {...props}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </IconWrapper>
+        ),
+        BookOpen: (props) => (
+          <IconWrapper {...props}>
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </IconWrapper>
+        ),
+        ArrowRight: (props) => (
+          <IconWrapper {...props}>
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </IconWrapper>
+        ),
+        Check: (props) => (
+          <IconWrapper {...props}>
+            <polyline points="20 6 9 17 4 12" />
+          </IconWrapper>
+        ),
+        Copy: (props) => (
+          <IconWrapper {...props}>
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </IconWrapper>
+        ),
+        AlertTriangle: (props) => (
+          <IconWrapper {...props}>
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </IconWrapper>
+        ),
+      };
+
+      const SectionHeader = ({ title, num }) => (
+        <div className="flex items-center gap-3 mb-6">
+          <span className="font-mono text-xs text-accent border border-accent px-1.5 py-0.5 rounded-sm">
+            0{num}
+          </span>
+          <h2 className="text-xl font-bold tracking-tight uppercase">
+            {title}
+          </h2>
+        </div>
+      );
+
+      const GridItem = ({ title, desc, icon: Icon, borderClasses = '' }) => (
+        <div
+          className={`p-8 border-line flex flex-col h-full ${borderClasses} bg-bg hover:bg-surface transition-colors`}
+        >
+          <div className="mb-6 text-muted">
+            <Icon className="w-6 h-6 text-txt" />
+          </div>
+          <h3 className="text-lg font-bold mb-2 tracking-tight">{title}</h3>
+          <p className="font-serif text-muted text-sm leading-relaxed">
+            {desc}
+          </p>
+        </div>
+      );
+
+      // --- SECTIONS ---
+
+      const Header = () => (
+        <header className="fixed top-0 w-full z-50 bg-bg/90 backdrop-blur-sm border-b border-line">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icons.Terminal className="w-5 h-5 text-accent" />
+              <span className="font-mono font-bold tracking-tighter text-lg">
+                AGENT_TOKENS
+              </span>
+            </div>
+            <nav className="flex items-center gap-6 font-mono text-xs md:text-sm">
+              <a
+                href="https://github.com/brysontang/agent-tokens/blob/main/spec/agent-tokens-v0.md"
+                className="hover:text-accent transition-colors"
+              >
+                v0-draft
+              </a>
+              <a
+                href="https://github.com/brysontang/agent-tokens"
+                className="hover:text-accent transition-colors flex items-center gap-2"
+              >
+                GitHub <Icons.ArrowRight className="w-3 h-3" />
+              </a>
+            </nav>
+          </div>
+        </header>
+      );
+
+      const Hero = () => {
+        const EXAMPLE_JSON = {
+          "v": 0,
+          "pkgs": {
+            "at.intent.v1": {
+              "mode": "strict",
+              "intentId": "01J0Z7G7E5M7H8Q7J9K2T8QJ9B",
+              "goal": "Get the weather forecast for Maui",
+              // ADDED: pathPrefix to match Spec example exactly
+              "allow": [{ "origin": "https://api.weather.gov", "methods": ["GET"], "pathPrefix": "/" }],
+              "exp": "2099-12-12T20:10:00Z"
+            }
+          }
+        };
+        // CORRECTED: Use spec-compliant encoder
+        const EXAMPLE_TOKEN = base64UrlEncodeJson(EXAMPLE_JSON);
+
+        return (
+          <section className="pt-32 pb-16 md:pt-40 md:pb-24 px-4 border-b border-line">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 border border-line">
+              <div className="bg-surface p-6 md:p-12 border-b lg:border-b-0 lg:border-r border-line relative overflow-hidden group">
+                <div className="absolute top-4 left-4 font-mono text-xs text-muted uppercase tracking-widest">
+                  Transport Layer
+                </div>
+                <div className="mt-8 font-mono text-sm text-muted">
+                  <div className="mb-2">
+                    <span className="text-accent">POST</span> /api/v1/resource
+                    HTTP/1.1
+                  </div>
+                  <div className="hidden md:block">
+                    <div className="mb-2">Host: api.bank-origin.com</div>
+                    <div className="mb-2">Content-Type: application/json</div>
+                  </div>
+                  <div className="break-all">
+                    <span className="text-txt">Agent-Token: </span>
+                    <span className="text-muted opacity-50 transition-opacity group-hover:opacity-100">
+                      {EXAMPLE_TOKEN}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-bg p-6 md:p-12 relative">
+                <div className="absolute top-4 left-4 font-mono text-xs text-accent uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+                  Decoded Kernel
+                </div>
+                <div className="mt-8">
+                  <SyntaxHighlight code={EXAMPLE_JSON} />
+                </div>
+              </div>
+            </div>
+            <div className="max-w-7xl mx-auto mt-12 text-center max-w-2xl">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-6">
+                The Identity Protocol for <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-txt to-muted">
+                  Autonomous Agents.
+                </span>
+              </h1>
+              <p className="font-serif text-muted text-lg max-w-prose mx-auto leading-relaxed">
+                A minimal, modular standard for agents to declare intent and
+                scope.
+                <br />
+                <span className="text-xs uppercase tracking-widest opacity-70">
+                  Policy Signals, Not Authentication.
+                </span>
+              </p>
+              <div className="mt-8 flex justify-center gap-4">
+                <a
+                  href="https://github.com/brysontang/agent-tokens/blob/main/spec/agent-tokens-v0.md"
+                  className="border border-line bg-surface hover:border-accent hover:text-accent transition-all px-6 py-3 font-mono text-sm uppercase tracking-wide flex items-center gap-2"
+                >
+                  <Icons.Terminal className="w-4 h-4" /> Read the Spec
+                </a>
+                <a
+                  href="#debug"
+                  className="border border-line bg-transparent hover:bg-surface transition-all px-6 py-3 font-mono text-sm uppercase tracking-wide"
+                >
+                  Debug Token
+                </a>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      const Wedge = () => (
+        <section className="py-24 border-b border-line bg-surface">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+              <div className="md:col-span-5">
+                <SectionHeader title="The Problem" num="1" />
+                <h3 className="text-2xl font-bold mb-4">The Confused Deputy</h3>
+                <p className="font-serif text-muted leading-relaxed mb-6">
+                  Without a dedicated identity layer, origins cannot distinguish
+                  between a user's direct action and an agent's autonomous
+                  action. This creates a security gap where agents can be
+                  tricked into performing actions outside their user's intent.
+                </p>
+                <ul className="space-y-3 font-mono text-sm text-muted">
+                  <li className="flex items-center gap-3">
+                    <Icons.AlertTriangle className="w-4 h-4 text-warning" />
+                    <span>User Intent: "Check Weather"</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Icons.AlertTriangle className="w-4 h-4 text-warning" />
+                    <span>Agent Action: "Transfer Funds"</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-txt">
+                    <Icons.ShieldAlert className="w-4 h-4 text-accent" />
+                    <span>Protocol Result: Policy Mismatch</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="md:col-span-7 flex justify-center md:justify-end">
+                <div className="w-full max-w-lg overflow-x-auto">
+                  <svg
+                    width="100%"
+                    height="auto"
+                    viewBox="0 0 600 300"
+                    className="min-w-[300px]"
+                  >
+                    <defs>
+                      <marker
+                        id="head"
+                        viewBox="0 0 10 10"
+                        refX="5"
+                        refY="5"
+                        markerWidth="6"
+                        markerHeight="6"
+                        orient="auto-start-reverse"
+                      >
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+                      </marker>
+                    </defs>
+                    <g transform="translate(50, 150)">
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="30"
+                        fill="#111"
+                        stroke="#E5E5E5"
+                        strokeWidth="2"
+                      />
+                      <text
+                        x="0"
+                        y="5"
+                        textAnchor="middle"
+                        fill="#E5E5E5"
+                        fontSize="10"
+                        fontFamily="monospace"
+                      >
+                        USER
+                      </text>
+                    </g>
+                    <g transform="translate(300, 150)">
+                      <rect
+                        x="-40"
+                        y="-30"
+                        width="80"
+                        height="60"
+                        fill="#161616"
+                        stroke="#E5E5E5"
+                        strokeWidth="2"
+                        rx="4"
+                      />
+                      <text
+                        x="0"
+                        y="5"
+                        textAnchor="middle"
+                        fill="#E5E5E5"
+                        fontSize="10"
+                        fontFamily="monospace"
+                      >
+                        AGENT
+                      </text>
+                    </g>
+                    <g transform="translate(550, 150)">
+                      <rect
+                        x="-40"
+                        y="-30"
+                        width="80"
+                        height="60"
+                        fill="#111"
+                        stroke="#E5E5E5"
+                        strokeWidth="2"
+                        rx="4"
+                      />
+                      <text
+                        x="0"
+                        y="5"
+                        textAnchor="middle"
+                        fill="#E5E5E5"
+                        fontSize="10"
+                        fontFamily="monospace"
+                      >
+                        ORIGIN
+                      </text>
+                    </g>
+                    <path
+                      d="M 80 150 L 260 150"
+                      stroke="#333"
+                      strokeWidth="2"
+                      markerEnd="url(#head)"
+                      strokeDasharray="5,5"
+                    />
+                    <text
+                      x="170"
+                      y="140"
+                      textAnchor="middle"
+                      fill="#666"
+                      fontSize="10"
+                      fontFamily="monospace"
+                    >
+                      "Weather"
+                    </text>
+                    <path
+                      d="M 340 150 L 510 150"
+                      stroke="#333"
+                      strokeWidth="2"
+                      markerEnd="url(#head)"
+                    />
+                    <text
+                      x="425"
+                      y="140"
+                      textAnchor="middle"
+                      fill="#666"
+                      fontSize="10"
+                      fontFamily="monospace"
+                    >
+                      GET /bank
+                    </text>
+                    <line
+                      x1="480"
+                      y1="110"
+                      x2="480"
+                      y2="190"
+                      stroke="#3B82F6"
+                      strokeWidth="2"
+                    />
+                    <rect
+                      x="460"
+                      y="100"
+                      width="40"
+                      height="16"
+                      fill="#3B82F6"
+                    />
+                    <text
+                      x="480"
+                      y="112"
+                      textAnchor="middle"
+                      fill="#111"
+                      fontSize="9"
+                      fontWeight="bold"
+                      fontFamily="monospace"
+                    >
+                      BLOCK
+                    </text>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+
+      const Features = () => (
+        <section className="border-b border-line bg-bg">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-line border-l border-t lg:border-t-0">
+              <GridItem
+                title="Extensible Kernel"
+                desc="A minimal v0 core that stays lightweight. Everything else—intents, attribution, payment—is handled via modular packages."
+                icon={Icons.Cpu}
+                borderClasses="border-r border-b"
+              />
+              <GridItem
+                title="Policy Guardrails"
+                desc="Enforce intent scopes at the HTTP layer. Middleware can automatically reject requests that drift from the user's stated goal."
+                icon={Icons.ShieldAlert}
+                borderClasses="border-r border-b"
+              />
+	              <GridItem
+	                title="Interop Ready"
+	                desc="Built for the modern stack. Includes cross-language test vectors to support Go/Python/Node implementations. Compatible with HTTP Message Signatures."
+	                icon={Icons.Globe}
+	                borderClasses="border-r border-b"
+	              />
+              <GridItem
+                title="Research Backed"
+                desc="Founded on principles from 'Harmonious Coexistence of AI Agents' (Tang, 2024). Not a growth hack, but a protocol."
+                icon={Icons.BookOpen}
+                borderClasses="border-r border-b"
+              />
+            </div>
+          </div>
+        </section>
+      );
+
+      const TokenDebugger = () => {
+        const [input, setInput] = useState('');
+        const [output, setOutput] = useState(null);
+        const [error, setError] = useState(null);
+        const [warning, setWarning] = useState(null); // ADDED: Separate state
+
+        const EXAMPLE_JSON = {
+          v: 0,
+          pkgs: {
+            'at.intent.v1': {
+              mode: 'strict',
+              intentId: 'DEBUG-1234',
+              goal: '☁️ 天気 — Check Maui weather',
+              allow: [{ origin: 'https://api.weather.gov', methods: ['GET'] }],
+            },
+          },
+        };
+
+        const EXAMPLE_TOKEN = base64UrlEncodeJson(EXAMPLE_JSON);
+
+        useEffect(() => {
+          handleDecode(EXAMPLE_TOKEN);
+        }, []);
+
+        const handleDecode = (val) => {
+          setInput(val);
+          setError(null);
+          setWarning(null); // Reset warning
+
+          if (!val) {
+            setOutput(null);
+            return;
+          }
+
+          // Set warning but CONTINUE decoding
+          if (val.length > 8192) {
+            setWarning('Warning: Token length approaches 8KB limit');
+          }
+
+          try {
+            const json = base64UrlDecodeJson(val);
+            setOutput(json);
+
+            const maybeIntent = json?.pkgs?.['at.intent.v1'];
+            if (maybeIntent !== undefined && !isAtIntentV1(maybeIntent)) {
+              let code = 'invalid_intent_package';
+              if (maybeIntent && typeof maybeIntent === 'object' && 'exp' in maybeIntent) {
+                const exp = maybeIntent.exp;
+                if (typeof exp !== 'string' || Number.isNaN(Date.parse(exp))) {
+                  code = 'invalid_intent_expiry';
+                }
+              }
+              setError(
+                `${code}: at.intent.v1 does not match the expected schema`
+              );
+            }
+          } catch (e) {
+            setError(e.message || 'Invalid Token');
+            setOutput(null);
+          }
+        };
+
+        return (
+          <section id="debug" className="py-24 border-b border-line bg-surface">
+            <div className="max-w-7xl mx-auto px-4">
+              <SectionHeader title="Token Debugger" num="2" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 border border-line">
+                <div className="p-6 border-b lg:border-b-0 lg:border-r border-line bg-bg">
+                  <label className="block font-mono text-xs text-muted mb-4 uppercase tracking-widest">
+                    Encoded Header Value
+                  </label>
+                  <textarea
+                    className="w-full h-64 bg-surface border border-line p-4 font-mono text-sm text-txt focus:border-accent focus:outline-none resize-none"
+                    placeholder="Paste Base64URL string here..."
+                    value={input}
+                    onChange={(e) => handleDecode(e.target.value)}
+                  />
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => handleDecode(EXAMPLE_TOKEN)}
+                      className="text-xs font-mono text-accent hover:underline flex items-center gap-1"
+                    >
+                      <Icons.Copy className="w-3 h-3" /> Reset to Example
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 bg-bg relative">
+                  <label className="block font-mono text-xs text-muted mb-4 uppercase tracking-widest">
+                    Decoded Payload
+                  </label>
+                  <div className="w-full h-64 overflow-auto bg-surface border border-line p-4">
+                    {/* Render Error */}
+                    {error && (
+                      <div className="text-warning font-mono text-sm flex items-center gap-2 mb-4">
+                        <Icons.AlertTriangle className="w-4 h-4" />
+                        {error}
+                      </div>
+                    )}
+
+                    {/* Render Warning (Additive) */}
+                    {warning && (
+                      <div className="text-accent font-mono text-sm flex items-center gap-2 mb-4 border-b border-line pb-2">
+                        <Icons.ShieldAlert className="w-4 h-4" />
+                        {warning}
+                      </div>
+                    )}
+
+                    {/* Render Output */}
+                    {output ? (
+                      <SyntaxHighlight code={output} />
+                    ) : (
+                      !error && (
+                        <div className="text-muted font-mono text-sm opacity-50 flex h-full items-center justify-center">
+                          Waiting for input...
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      const Usage = () => {
+        const [copied, setCopied] = useState(false);
+        const cmd = 'npm install @agent-tokens/core @agent-tokens/express';
+
+        const copyCmd = () => {
+          navigator.clipboard.writeText(cmd);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        };
+
+        return (
+          <section className="py-24 border-b border-line bg-bg">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                  <SectionHeader title="Implementation" num="3" />
+                  <p className="font-serif text-muted mb-8 leading-relaxed">
+                    Agent Tokens are designed to be dropped into existing middleware stacks.
+                    Start validating agent intent with a single package.
+                  </p>
+                  <div
+                    className="inline-flex items-center gap-4 bg-surface border border-line p-1 pr-4 cursor-pointer hover:border-muted transition-colors group"
+                    onClick={copyCmd}
+                  >
+                    <div className="bg-line/50 p-3">
+                      <Icons.Terminal className="w-4 h-4 text-txt" />
+                    </div>
+                    <code className="font-mono text-sm text-accent">{cmd}</code>
+                    <div className="ml-auto text-muted">
+                      {copied ? (
+                        <Icons.Check className="w-4 h-4 text-success" />
+                      ) : (
+                        <Icons.Copy className="w-4 h-4 group-hover:text-txt transition-colors" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-surface border border-line p-6 font-mono text-sm overflow-x-auto">
+<pre className="text-muted">
+<span className="text-accent">import</span> express <span className="text-accent">from</span> <span className="text-success">'express'</span>;
+<span className="text-accent">import</span> &#123; agentTokens &#125; <span className="text-accent">from</span> <span className="text-success">'@agent-tokens/express'</span>;
+
+<span className="text-accent">const</span> app = express();
+
+<span className="text-muted">// Mount middleware (enforces strict mode automatically)</span>
+app.use(agentTokens(&#123;
+  required: <span className="text-bool">true</span>,
+  enforceIntentScope: <span className="text-success">'strict'</span>
+&#125;));
+
+app.get(<span className="text-success">'/weather'</span>, (req, res) => &#123;
+  <span className="text-muted">// Request is already validated against allowed scope</span>
+  res.json(&#123; ok: <span className="text-bool">true</span> &#125;);
+&#125;);
+</pre>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      const Footer = () => (
+        <footer className="py-12 bg-bg text-muted text-sm font-mono border-t border-line">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+              <span className="text-txt font-bold">AGENT_TOKENS</span> &copy;
+              2025
+            </div>
+            <div className="flex gap-6">
+              <a
+                href="https://github.com/brysontang/agent-tokens/blob/main/spec/agent-tokens-v0.md"
+                className="hover:text-txt transition-colors"
+              >
+                Spec
+              </a>
+              <a
+                href="https://github.com/brysontang/agent-tokens"
+                className="hover:text-txt transition-colors"
+              >
+                GitHub
+              </a>
+              <a
+                href="https://npmjs.com/package/@agent-tokens/core"
+                className="hover:text-txt transition-colors"
+              >
+                NPM
+              </a>
+            </div>
+            <div className="text-xs opacity-50">
+              Status: v0-draft (Experimental)
+            </div>
+          </div>
+        </footer>
+      );
+
+      const App = () => (
+        <div className="min-h-screen text-txt selection:bg-accent selection:text-white">
+          <Header />
+          <main>
+            <Hero />
+            <Wedge />
+            <Features />
+            <TokenDebugger />
+            <Usage />
+          </main>
+          <Footer />
+        </div>
+      );
+
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { hasError: false, error: null };
+        }
+        static getDerivedStateFromError(error) {
+          return { hasError: true, error };
+        }
+        render() {
+          if (this.state.hasError)
+            return (
+              <div className="p-10 text-white bg-red-900 font-mono">
+                <h1 className="text-xl font-bold mb-4">Application Error</h1>
+                <pre>{this.state.error.toString()}</pre>
+              </div>
+            );
+          return this.props.children;
+        }
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      );
+    </script>
+  </body>
+</html>

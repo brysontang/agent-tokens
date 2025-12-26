@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-padding",
+  "desc": "Token contains Base64 padding (=), which is not allowed in strict Base64url.",
+  "token": "eyJ2IjowLCJwa2dzIjp7fX0=",
+  "error": "invalid_token"
+}

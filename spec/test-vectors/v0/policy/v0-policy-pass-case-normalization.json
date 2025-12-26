@@ -1,0 +1,10 @@
+{
+  "id": "v0-policy-pass-case-normalization",
+  "desc": "Token specifies 'GET', request comes in as 'get'. Evaluator should normalize methods.",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJjYXNlLXRlc3QiLCJhbGxvdyI6W3sibWV0aG9kcyI6WyJHRVQiXSwicGF0aFByZWZpeCI6Ii8ifV19fX0",
+  "context": {
+    "method": "get",
+    "path": "/anything"
+  },
+  "expect_result": "allow"
+}

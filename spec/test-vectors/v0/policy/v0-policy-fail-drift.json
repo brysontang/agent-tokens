@@ -1,0 +1,11 @@
+{
+  "id": "v0-policy-fail-drift",
+  "desc": "Token is valid, but request (POST /bank/transfer) conflicts with allow list (GET /weather).",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJkcmlmdC10ZXN0IiwiYWxsb3ciOlt7Im1ldGhvZHMiOlsiR0VUIl0sInBhdGhQcmVmaXgiOiIvd2VhdGhlciJ9XSwiZXhwIjoiMjA5OS0wMS0wMVQwMDowMDowMFoifX19",
+  "context": {
+    "method": "POST",
+    "path": "/bank/transfer"
+  },
+  "expect_result": "deny",
+  "expect_error": "out_of_scope"
+}

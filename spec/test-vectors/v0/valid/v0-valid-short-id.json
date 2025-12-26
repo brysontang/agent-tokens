@@ -1,0 +1,13 @@
+{
+  "id": "v0-valid-short-id",
+  "desc": "Valid token with a short intentId (spec allows any non-empty string).",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiIxIiwiYWxsb3ciOlt7Im1ldGhvZHMiOlsiR0VUIl0sInBhdGhQcmVmaXgiOiIvIn1dfX19",
+  "expect": {
+    "v": 0,
+    "pkgs": {
+      "at.intent.v1": {
+        "intentId": "1"
+      }
+    }
+  }
+}

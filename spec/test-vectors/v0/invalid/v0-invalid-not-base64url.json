@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-not-base64url",
+  "desc": "Token is not valid base64url (should be rejected as invalid_token).",
+  "token": "not-a-token",
+  "error": "invalid_token"
+}

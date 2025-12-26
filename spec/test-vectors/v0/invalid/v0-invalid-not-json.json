@@ -1,0 +1,6 @@
+{
+  "id": "v0-invalid-not-json",
+  "desc": "Token decodes to bytes that are not JSON.",
+  "token": "bm90LWpzb24",
+  "error": "invalid_token"
+}

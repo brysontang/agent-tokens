@@ -1,0 +1,13 @@
+{
+  "id": "v0-hello",
+  "desc": "Envelope with a simple package payload.",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImhlbGxvIjp7ImEiOjF9fX0",
+  "expect": {
+    "v": 0,
+    "pkgs": {
+      "hello": {
+        "a": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "v0-minimal",
+  "desc": "Minimal envelope with an empty pkgs object.",
+  "token": "eyJ2IjowLCJwa2dzIjp7fX0",
+  "expect": {
+    "v": 0,
+    "pkgs": {}
+  }
+}

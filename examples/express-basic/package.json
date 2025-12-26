@@ -1,0 +1,18 @@
+{
+  "name": "@agent-tokens/example-express-basic",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "express": "^4.18.0",
+    "@agent-tokens/core": "workspace:*",
+    "@agent-tokens/express": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "tsx": "^4.19.0"
+  },
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "token": "tsx src/print-token.ts"
+  }
+}

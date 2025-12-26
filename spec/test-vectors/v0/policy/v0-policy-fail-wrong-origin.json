@@ -1,0 +1,12 @@
+{
+  "id": "v0-policy-fail-wrong-origin",
+  "desc": "Token is valid for Weather Gov, but the request is received by Bank Corp (origin mismatch).",
+  "token": "eyJ2IjowLCJwa2dzIjp7ImF0LmludGVudC52MSI6eyJtb2RlIjoic3RyaWN0IiwiaW50ZW50SWQiOiJvcmlnaW4tdGVzdCIsImFsbG93IjpbeyJvcmlnaW4iOiJodHRwczovL2FwaS53ZWF0aGVyLmdvdiIsIm1ldGhvZHMiOlsiR0VUIl0sInBhdGhQcmVmaXgiOiIvIn1dfX19",
+  "context": {
+    "method": "GET",
+    "path": "/forecast",
+    "origin": "https://api.bank.com"
+  },
+  "expect_result": "deny",
+  "expect_error": "out_of_scope"
+}
