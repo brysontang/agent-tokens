@@ -1,0 +1,51 @@
+# Agent Tokens Protocol
+
+> Cryptographic identity standard for AI agents. Replaces adversarial bot detection with declared identity via HTTP headers.
+
+This file helps AI/LLM systems understand this repository. To understand Agent Tokens, read the files listed below. Ignore everything else.
+
+## Quick Start
+
+- README: /README.md
+- Specification: /spec/atp/ATP-0001-core.md
+- Proposal Process: /spec/atp/ATP-0000-process.md
+
+## Core Files
+
+Understanding the protocol:
+- /spec/atp/ATP-0001-core.md - Wire format and envelope structure
+- /spec/README.md - Spec overview
+
+Reference implementation (TypeScript):
+- /packages/core/src/envelope.ts - Token envelope types
+- /packages/core/src/codec.ts - Base64url encoding/decoding
+- /packages/core/src/packages/intent.ts - Intent package (at.intent.v1)
+- /packages/express/src/middleware.ts - Express middleware implementation
+
+Examples:
+- /examples/express-basic/src/server.ts - Basic Express server with Agent Tokens
+- /examples/express-basic/src/print-token.ts - Token generation example
+
+## Test Vectors
+
+Cross-language conformance tests:
+- /spec/test-vectors/v0/valid/ - Valid token examples
+- /spec/test-vectors/v0/invalid/ - Invalid token examples (should reject)
+- /spec/test-vectors/v0/policy/ - Policy enforcement test cases
+
+## Ignore
+
+These files are not needed to understand the protocol:
+- node_modules/
+- *.lock files
+- .git/
+- tsconfig*.json
+- CI/CD configuration
+- Build artifacts (dist/, *.js.map)
+
+## Key Concepts
+
+1. **Envelope**: JSON object with `v` (version) and `pkgs` (packages map)
+2. **Wire Format**: `Agent-Token: base64url(JSON)`
+3. **Packages**: Extensible payloads (e.g., `at.intent.v1` for intent declarations)
+4. **Not a JWT**: Simpler than JWT, designed for composition with HTTP Message Signatures

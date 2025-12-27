@@ -1,0 +1,7 @@
+# Security Policy for Agent Tokens Protocol
+# https://securitytxt.org/
+
+Contact: mailto:brysontang@gmail.com
+Preferred-Languages: en
+Canonical: https://github.com/brysontang/agent-tokens/.well-known/security.txt
+Policy: https://github.com/brysontang/agent-tokens/blob/main/SECURITY.md

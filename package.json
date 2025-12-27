@@ -1,7 +1,32 @@
 {
   "name": "agent-tokens",
   "private": true,
+  "description": "Cryptographic identity protocol for AI agents. Enables autonomous systems to declare identity via HTTP headers instead of adversarial bot detection.",
   "packageManager": "pnpm@9.12.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brysontang/agent-tokens.git"
+  },
+  "homepage": "https://github.com/brysontang/agent-tokens",
+  "author": "Bryson Tang",
+  "keywords": [
+    "agent-tokens",
+    "ai-agent",
+    "agentic",
+    "machine-to-machine",
+    "m2m-security",
+    "autonomous-systems",
+    "llm-security",
+    "ai-identity",
+    "mcp",
+    "agent-identity",
+    "cryptographic-provenance",
+    "http-headers",
+    "authentication",
+    "identity-protocol",
+    "ai-authentication"
+  ],
   "workspaces": [
     "packages/*",
     "examples/*"
