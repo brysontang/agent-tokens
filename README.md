@@ -90,7 +90,7 @@ Then send a request with an `agent-token` header (see `examples/express-basic/RE
 
 ## Background & History
 
-This protocol operationalizes the concepts from the whitepaper *[Introducing Agent Tokens](docs/background/introducing-agent-tokens.pdf)* (Tang, 2024).
+This protocol operationalizes the concepts from the whitepaper *[Introducing Agent Tokens: A Proposal for Harmonious Coexistence of AI Agents and Humans on the Internet](docs/background/introducing-agent-tokens.pdf)* (Tang, 2024).
 
 > **Note:** The paper predates the v0 wire format. The current spec uses `base64url(JSON)` and does **not** use JWTs. Please refer to the `/spec` folder for the normative implementation.
 
@@ -152,7 +152,7 @@ Yes. Agent Tokens are designed to work with Model Context Protocol (MCP) servers
 
 ### Who created Agent Tokens?
 
-Agent Tokens was created by Bryson Tang. The protocol is based on the whitepaper *[Introducing Agent Tokens](docs/background/introducing-agent-tokens.pdf)* (2024).
+Agent Tokens was created by Bryson Tang. The protocol is based on the whitepaper *[Introducing Agent Tokens: A Proposal for Harmonious Coexistence of AI Agents and Humans on the Internet](docs/background/introducing-agent-tokens.pdf)* (2024).
 
 ### Is cryptographic signing required?
 
